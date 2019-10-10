@@ -76,22 +76,55 @@ public class ExtensionLoader<T> {
 
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[,]+\\s*");
 
+    /**
+     * 拓展加载器集合
+     * key：拓展接口
+     */
     private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>();
 
+    /**
+     * 拓展实现类集合
+     *      key：拓展实现类
+     *      value:拓展对象
+     *
+     * 示例：
+     *      key：为 Class<AccessLogFilter>
+     *      value：为 AccessLogFilter 对象
+     */
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<>();
 
+    /**
+     * 拓展接口
+     */
     private final Class<?> type;
 
+    /**
+     * 对象工厂
+     * 用于调用 {@link #injectExtension(Object)} 方法，向拓展对象注入依赖属性。
+     */
     private final ExtensionFactory objectFactory;
 
+    /**
+     * 缓存的拓展名与拓展类的映射。
+     * 和 {@link #cachedClasses} 的KV对调
+     * 通过 {@link #getExtensionLoader(Class)} 加载
+     */
     private final ConcurrentMap<Class<?>, String> cachedNames = new ConcurrentHashMap<>();
 
+    /**
+     * 缓存的拓展实现类集合
+     *
+     * 通过 {@link #loadExtensionClasses()} 加载
+     */
     private final Holder<Map<String, Class<?>>> cachedClasses = new Holder<>();
 
     private final Map<String, Object> cachedActivates = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<>();
     private final Holder<Object> cachedAdaptiveInstance = new Holder<>();
     private volatile Class<?> cachedAdaptiveClass = null;
+    /**
+     * 缓存的默认拓展名称
+     */
     private String cachedDefaultName;
     private volatile Throwable createAdaptiveInstanceError;
 
@@ -113,14 +146,17 @@ public class ExtensionLoader<T> {
         if (type == null) {
             throw new IllegalArgumentException("Extension type == null");
         }
+        // 必须是接口
         if (!type.isInterface()) {
             throw new IllegalArgumentException("Extension type (" + type + ") is not an interface!");
         }
+        // 必须添加 @SPI 注解
         if (!withExtensionAnnotation(type)) {
             throw new IllegalArgumentException("Extension type (" + type +
                     ") is not an extension, because it is NOT annotated with @" + SPI.class.getSimpleName() + "!");
         }
 
+        // 获取拓展点对应的加载器
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
@@ -622,13 +658,19 @@ public class ExtensionLoader<T> {
         return getExtensionClasses().get(name);
     }
 
+    /**
+     * 从缓存中获取拓展实现类数组（双重检查锁）
+     * @return 拓展实现类数组
+     */
     private Map<String, Class<?>> getExtensionClasses() {
         Map<String, Class<?>> classes = cachedClasses.get();
         if (classes == null) {
             synchronized (cachedClasses) {
                 classes = cachedClasses.get();
                 if (classes == null) {
+                    // 从配置文件中，加载拓展实现类
                     classes = loadExtensionClasses();
+                    // 设置进缓存中
                     cachedClasses.set(classes);
                 }
             }
@@ -637,9 +679,11 @@ public class ExtensionLoader<T> {
     }
 
     /**
+     * 从配置文件中加载拓展实现类
      * synchronized in getExtensionClasses
      * */
     private Map<String, Class<?>> loadExtensionClasses() {
+        // 缓存默认的拓展实现名称
         cacheDefaultExtensionName();
 
         Map<String, Class<?>> extensionClasses = new HashMap<>();
@@ -653,6 +697,7 @@ public class ExtensionLoader<T> {
     }
 
     /**
+     * 获取默认的拓展实现类名称
      * extract and cache default extension name if exists
      */
     private void cacheDefaultExtensionName() {
@@ -674,9 +719,17 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 从一个配置文件中，加载拓展实现类数组
+     * @param extensionClasses 拓展实现类数组
+     * @param dir 文件前缀
+     * @param type 拓展类名称
+     */
     private void loadDirectory(Map<String, Class<?>> extensionClasses, String dir, String type) {
+        // 真实文件名称
         String fileName = dir + type;
         try {
+            // 获取文件名对应的文件数组
             Enumeration<java.net.URL> urls;
             ClassLoader classLoader = findClassLoader();
             if (classLoader != null) {
@@ -687,6 +740,7 @@ public class ExtensionLoader<T> {
             if (urls != null) {
                 while (urls.hasMoreElements()) {
                     java.net.URL resourceURL = urls.nextElement();
+                    // 加载拓展实现类
                     loadResource(extensionClasses, classLoader, resourceURL);
                 }
             }
@@ -696,6 +750,12 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 单一加载拓展实现类
+     * @param extensionClasses 拓展实现类数组
+     * @param classLoader 类加载器
+     * @param resourceURL 资源url
+     */
     private void loadResource(Map<String, Class<?>> extensionClasses, ClassLoader classLoader, java.net.URL resourceURL) {
         try {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(resourceURL.openStream(), StandardCharsets.UTF_8))) {
@@ -730,6 +790,14 @@ public class ExtensionLoader<T> {
         }
     }
 
+    /**
+     * 加载拓展类
+     * @param extensionClasses
+     * @param resourceURL
+     * @param clazz
+     * @param name
+     * @throws NoSuchMethodException
+     */
     private void loadClass(Map<String, Class<?>> extensionClasses, java.net.URL resourceURL, Class<?> clazz, String name) throws NoSuchMethodException {
         if (!type.isAssignableFrom(clazz)) {
             throw new IllegalStateException("Error occurred when loading extension class (interface: " +
