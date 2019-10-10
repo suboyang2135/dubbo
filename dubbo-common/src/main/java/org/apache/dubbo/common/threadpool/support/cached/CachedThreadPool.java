@@ -47,11 +47,17 @@ public class CachedThreadPool implements ThreadPool {
 
     @Override
     public Executor getExecutor(URL url) {
+        // 线程名称
         String name = url.getParameter(THREAD_NAME_KEY, DEFAULT_THREAD_NAME);
+        // 核心线程数量（0）
         int cores = url.getParameter(CORE_THREADS_KEY, DEFAULT_CORE_THREADS);
+        // 最大线程数（0x7fffffff）
         int threads = url.getParameter(THREADS_KEY, Integer.MAX_VALUE);
+        // 队列容量（0）
         int queues = url.getParameter(QUEUES_KEY, DEFAULT_QUEUES);
+        // 线程存活时间（60s）
         int alive = url.getParameter(ALIVE_KEY, DEFAULT_ALIVE);
+        // 创建执行器
         return new ThreadPoolExecutor(cores, threads, alive, TimeUnit.MILLISECONDS,
                 queues == 0 ? new SynchronousQueue<Runnable>() :
                         (queues < 0 ? new LinkedBlockingQueue<Runnable>()

@@ -16,20 +16,16 @@
  */
 package org.apache.dubbo.common.threadpool.support;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.ThreadPoolExecutor;
-
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.JVMUtil;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.concurrent.*;
 
 import static org.apache.dubbo.common.constants.CommonConstants.DUMP_DIRECTORY;
 
@@ -57,6 +53,9 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
 
     private static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd_HH:mm:ss";
 
+    /**
+     * 信号量，默认为 1
+     */
     private static Semaphore guard = new Semaphore(1);
 
     public AbortPolicyWithReport(String threadName, URL url) {
