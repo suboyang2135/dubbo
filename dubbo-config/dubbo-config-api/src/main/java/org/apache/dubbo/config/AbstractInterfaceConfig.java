@@ -321,19 +321,22 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      *
      * Load the registry and conversion it to {@link URL}, the priority order is: system property > dubbo registry config
      *
-     * @param provider whether it is the provider side
-     * @return
+     * @param provider whether it is the provider side 是否是服务提供者
+     * @return URL 数组
      */
     protected List<URL> loadRegistries(boolean provider) {
         // check && override if necessary
+        // 创建注册中心数组
         List<URL> registryList = new ArrayList<URL>();
         if (CollectionUtils.isNotEmpty(registries)) {
             for (RegistryConfig config : registries) {
+                // 获取注册中心地址
                 String address = config.getAddress();
                 if (StringUtils.isEmpty(address)) {
                     address = ANYHOST_VALUE;
                 }
                 if (!RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(address)) {
+                    // 将各种参数添加到map中
                     Map<String, String> map = new HashMap<String, String>();
                     appendParameters(map, application);
                     appendParameters(map, config);
@@ -342,15 +345,18 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     if (!map.containsKey(PROTOCOL_KEY)) {
                         map.put(PROTOCOL_KEY, DUBBO_PROTOCOL);
                     }
+                    // 解析地址，创建URL数组
                     List<URL> urls = UrlUtils.parseURLs(address, map);
 
+                    // 循环 `url` ，设置 "registry" 和 "protocol" 属性。
                     for (URL url : urls) {
+                        // 设置 `registry=${protocol}` 和 `protocol=registry` 到 URL
                         url = URLBuilder.from(url)
                                 .addParameter(REGISTRY_KEY, url.getProtocol())
                                 .setProtocol(REGISTRY_PROTOCOL)
                                 .build();
-                        if ((provider && url.getParameter(REGISTER_KEY, true))
-                                || (!provider && url.getParameter(SUBSCRIBE_KEY, true))) {
+                        if ((provider && url.getParameter(REGISTER_KEY, true)) // 服务提供者 && 注册
+                                || (!provider && url.getParameter(SUBSCRIBE_KEY, true))) { // 服务消费者 && 注册
                             registryList.add(url);
                         }
                     }

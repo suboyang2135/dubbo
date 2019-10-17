@@ -93,6 +93,7 @@ public abstract class AbstractServiceConfig extends AbstractInterfaceConfig {
     protected String accesslog;
 
     /**
+     * 注册中心配置数组
      * The protocol list the service will export with
      */
     protected List<ProtocolConfig> protocols;
